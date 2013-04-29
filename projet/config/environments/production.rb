@@ -1,15 +1,11 @@
-Projet::Application.configure do
-  # Settings specified here will take precedence over those in config/application.rb
+Hadean::Application.configure do
+  # Settings specified here will take precedence over those in config/environment.rb
 
+  config.force_ssl = true
+
+  # The production environment is meant for finished, "live" apps.
   # Code is not reloaded between requests
   config.cache_classes = true
-
-  # Full error reports are disabled and caching is turned on
-  config.consider_all_requests_local       = false
-  config.action_controller.perform_caching = true
-
-  # Disable Rails's static asset server (Apache or nginx will already do this)
-  config.serve_static_assets = false
 
   # Compress JavaScripts and CSS
   config.assets.compress = true
@@ -20,34 +16,74 @@ Projet::Application.configure do
   # Generate digests for assets URLs
   config.assets.digest = true
 
-  # Defaults to nil and saved in location specified by config.assets.prefix
-  # config.assets.manifest = YOUR_PATH
+  # config.assets.precompile += %w( *.css *.js )
+
+  config.assets.precompile += %w( *.js )
+  config.assets.precompile += [ 'admin.css',
+                                'admin/app.css',
+                                'admin/cart.css',
+                                'admin/foundation.css',
+                                'admin/help.css',
+                                'admin/ie.css',
+                                'autocomplete.css',
+                                'application.css',
+                                'chosen.css',
+                                'foundation.css',
+                                'home_page.css',
+                                'ie.css',
+                                'ie6.css',
+                                'login.css',
+                                'markdown.css',
+                                'myaccount.css',
+                                'pikachoose_product.css',
+                                'product_page.css',
+                                'products_page.css',
+                                'shopping_cart_page.css',
+                                'signup.css',
+                                'site/app.css',
+                                'sprite.css',
+                                'tables.css',
+                                'cupertino/jquery-ui-1.8.12.custom.css',# in vendor
+                                'modstyles.css', # in vendor
+                                'scaffold.css' # in vendor
+                                ]
+
+  # Full error reports are disabled and caching is turned on
+  config.consider_all_requests_local       = false
+  config.action_controller.perform_caching = true
+
+  if ENV['FOG_DIRECTORY'].present?
+    config.action_controller.asset_host = "https://#{ENV['FOG_DIRECTORY']}.s3.amazonaws.com"
+  end
 
   # Specifies the header that your server uses for sending files
-  # config.action_dispatch.x_sendfile_header = "X-Sendfile" # for apache
-  # config.action_dispatch.x_sendfile_header = 'X-Accel-Redirect' # for nginx
+  config.action_dispatch.x_sendfile_header = "X-Sendfile"
 
-  # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
-  # config.force_ssl = true
+  # For nginx:
+  # config.action_dispatch.x_sendfile_header = 'X-Accel-Redirect'
+
+  # If you have no front-end server that supports something like X-Sendfile,
+  # just comment this out and Rails will serve the files
+  config.cache_store = :memory_store
+  #config.cache_store = :dalli_store
 
   # See everything in the log (default is :info)
   # config.log_level = :debug
 
-  # Prepend all log lines with the following tags
-  # config.log_tags = [ :subdomain, :uuid ]
-
   # Use a different logger for distributed setups
-  # config.logger = ActiveSupport::TaggedLogging.new(SyslogLogger.new)
+  # config.logger = SyslogLogger.new
 
   # Use a different cache store in production
   # config.cache_store = :mem_cache_store
 
-  # Enable serving of images, stylesheets, and JavaScripts from an asset server
+  # Disable Rails's static asset server
+  # In production, Apache or nginx will already do this
+  config.serve_static_assets = false
+
+  # Enable serving of images, stylesheets, and javascripts from an asset server
   # config.action_controller.asset_host = "http://assets.example.com"
 
-  # Precompile additional assets (application.js, application.css, and all non-JS/CSS are already added)
-  # config.assets.precompile += %w( search.js )
-
+  config.action_mailer.default_url_options = { :host => 'ror-e.herokuapp.com' }
   # Disable delivery errors, bad email addresses will be ignored
   # config.action_mailer.raise_delivery_errors = false
 
@@ -61,7 +97,42 @@ Projet::Application.configure do
   # Send deprecation notices to registered listeners
   config.active_support.deprecation = :notify
 
-  # Log the query plan for queries taking more than this (works
-  # with SQLite, MySQL, and PostgreSQL)
-  # config.active_record.auto_explain_threshold_in_seconds = 0.5
+
+  config.after_initialize do
+    #Formtastic::SemanticFormBuilder.send(:include, Formtastic::DatePicker)
+    #Formtastic::SemanticFormBuilder.send(:include, Formtastic::FuturePicker)
+    #Formtastic::SemanticFormBuilder.send(:include, Formtastic::YearPicker)
+
+    ActiveMerchant::Billing::Base.mode = :test
+    #::GATEWAY = ActiveMerchant::Billing::PaypalGateway.new(
+    #  :login      => Settings.paypal.login
+    #  :password   => Settings.paypal.password
+    #  :signature  => Settings.paypal.signature
+    #)
+
+    ::GATEWAY = ActiveMerchant::Billing::AuthorizeNetGateway.new(
+      :login    => Settings.authnet.login,
+      :password => Settings.authnet.password,
+      :test     => true
+    )
+
+    ::CIM_GATEWAY = ActiveMerchant::Billing::AuthorizeNetCimGateway.new(
+      :login    => Settings.authnet.login,
+      :password => Settings.authnet.password,
+      :test     => true
+    )
+    Paperclip::Attachment.default_options[:storage] = :s3
+    #::GATEWAY = ActiveMerchant::Billing::BraintreeGateway.new(
+    #  :login     => Settings.braintree.login
+    #  :password  => Settings.braintree.password
+    #)
+  end
+  PAPERCLIP_STORAGE_OPTS = {  :styles => {:mini => '48x48>',
+                                          :small => '100x100>',
+                                          :medium   => '200x200>',
+                                          :product => '320x320>',
+                                          :large => '600x600>' },
+                              :default_style => :product,
+                              :url => "/assets/products/:id/:style/:basename.:extension",
+                              :path => ":rails_root/public/assets/products/:id/:style/:basename.:extension" }
 end
